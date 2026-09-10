@@ -3,23 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لعبة XO - فرصة واحدة فقط</title>
-    <link rel="stylesheet" href="style.css">
+    <title>لعبة XO - البوت المستحيل</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+
+        .container {
+            background-color: #1e293b;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        h1 {
+            color: #38bdf8;
+            margin-bottom: 0.5rem;
+            font-size: 1.8rem;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: #ef4444;
+            margin-bottom: 1.5rem;
+            font-weight: bold;
+        }
+
+        #status {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            font-weight: bold;
+            min-height: 30px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .cell {
+            width: 100%;
+            height: 90px;
+            background-color: #334155;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            user-select: none;
+        }
+
+        .cell:hover {
+            background-color: #475569;
+        }
+
+        .cell.x {
+            color: #38bdf8;
+        }
+
+        .cell.o {
+            color: #f43f5e;
+        }
+
+        /* شاشة الحظر النهائي */
+        #banned-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .banned-card {
+            background-color: #18181b;
+            border: 2px solid #ef4444;
+            padding: 2.5rem;
+            border-radius: 16px;
+            color: #ef4444;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.3);
+        }
+
+        .banned-card h1 {
+            color: #ef4444;
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .banned-card p {
+            color: #a1a1aa;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
 
     <!-- شاشة الحظر عند الخسارة -->
     <div id="banned-screen" class="hidden">
         <div class="banned-card">
-            <h1>❌ تم حظرك!</h1>
-            <p>لقد خسرت اللعبة، ولا يمكنك الدخول إلى هذا الموقع مرة أخرى.</p>
+            <h1>💀 تم حظرك!</h1>
+            <p>لقد خسرت اللعبة ضد البوت.. وكما اتفقنا، لا يمكنك دخول الموقع مرة أخرى!</p>
         </div>
     </div>
 
-    <!-- شاشة اللعبة الرئيسية -->
+    <!-- شاشة اللعبة -->
     <div id="game-screen" class="container">
-        <h1>لعبة XO (اختر بحذر!)</h1>
-        <p class="subtitle">إذا خسرت.. فلن تتمكن من الدخول للموقع مجدداً!</p>
+        <h1>XO المستحيلة 🧠</h1>
+        <p class="subtitle">⚠️ خيار الخسارة = حظر دائم من الموقع!</p>
         
         <div id="status">دورك الآن (X)</div>
 
@@ -36,6 +157,163 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gameScreen = document.getElementById('game-screen');
+            const bannedScreen = document.getElementById('banned-screen');
+            const cells = document.querySelectorAll('.cell');
+            const statusText = document.getElementById('status');
+
+            let board = ['', '', '', '', '', '', '', '', ''];
+            let isGameActive = true;
+            const PLAYER = 'X';
+            const BOT = 'O';
+
+            const winConditions = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8],
+                [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                [0, 4, 8], [2, 4, 6]
+            ];
+
+            // 1. التحقق الفوري من حالة الحظر عند فتح الصفحة
+            if (localStorage.getItem('xo_impossible_ban') === 'true') {
+                lockUserOut();
+                return;
+            }
+
+            // 2. إضافة مستمع الأحداث لضغطات اللاعب
+            cells.forEach(cell => {
+                cell.addEventListener('click', handleCellClick);
+            });
+
+            function handleCellClick(e) {
+                const index = parseInt(e.target.getAttribute('data-index'));
+
+                if (board[index] !== '' || !isGameActive) return;
+
+                // حركة اللاعب
+                makeMove(index, PLAYER);
+
+                if (checkWin(board, PLAYER)) {
+                    statusText.textContent = '🎉 مستحيل! لقد فزت!';
+                    isGameActive = false;
+                    return;
+                }
+
+                if (isBoardFull(board)) {
+                    statusText.textContent = '🤝 تعادل! نَجَوْت هذه المرة..';
+                    setTimeout(resetGame, 2000);
+                    return;
+                }
+
+                // دور البوت الذكي
+                isGameActive = false;
+                statusText.textContent = 'البوت يفكر... 🤖';
+                
+                setTimeout(() => {
+                    const bestMove = getBestMove();
+                    makeMove(bestMove, BOT);
+
+                    if (checkWin(board, BOT)) {
+                        statusText.textContent = '💀 كش ملك! لقد خسرت!';
+                        localStorage.setItem('xo_impossible_ban', 'true');
+                        setTimeout(lockUserOut, 1500);
+                        return;
+                    }
+
+                    if (isBoardFull(board)) {
+                        statusText.textContent = '🤝 تعادل! نَجَوْت هذه المرة..';
+                        setTimeout(resetGame, 2000);
+                        return;
+                    }
+
+                    statusText.textContent = 'دورك الآن (X)';
+                    isGameActive = true;
+                }, 400);
+            }
+
+            function makeMove(index, symbol) {
+                board[index] = symbol;
+                cells[index].textContent = symbol;
+                cells[index].classList.add(symbol.toLowerCase());
+            }
+
+            function checkWin(currentBoard, symbol) {
+                return winConditions.some(condition => {
+                    return condition.every(index => currentBoard[index] === symbol);
+                });
+            }
+
+            function isBoardFull(currentBoard) {
+                return currentBoard.every(cell => cell !== '');
+            }
+
+            function resetGame() {
+                board = ['', '', '', '', '', '', '', '', ''];
+                cells.forEach(cell => {
+                    cell.textContent = '';
+                    cell.classList.remove('x', 'o');
+                });
+                statusText.textContent = 'دورك الآن (X)';
+                isGameActive = true;
+            }
+
+            function lockUserOut() {
+                gameScreen.classList.add('hidden');
+                bannedScreen.classList.remove('hidden');
+            }
+
+            // ==========================================
+            // خوارزمية الذكاء الاصطناعي (Minimax Algorithm)
+            // ==========================================
+            function getBestMove() {
+                let bestScore = -Infinity;
+                let move = -1;
+
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = BOT;
+                        let score = minimax(board, 0, false);
+                        board[i] = '';
+                        if (score > bestScore) {
+                            bestScore = score;
+                            move = i;
+                        }
+                    }
+                }
+                return move;
+            }
+
+            function minimax(currentBoard, depth, isMaximizing) {
+                if (checkWin(currentBoard, BOT)) return 10 - depth;
+                if (checkWin(currentBoard, PLAYER)) return depth - 10;
+                if (isBoardFull(currentBoard)) return 0;
+
+                if (isMaximizing) {
+                    let bestScore = -Infinity;
+                    for (let i = 0; i < 9; i++) {
+                        if (currentBoard[i] === '') {
+                            currentBoard[i] = BOT;
+                            let score = minimax(currentBoard, depth + 1, false);
+                            currentBoard[i] = '';
+                            bestScore = Math.max(score, bestScore);
+                        }
+                    }
+                    return bestScore;
+                } else {
+                    let bestScore = Infinity;
+                    for (let i = 0; i < 9; i++) {
+                        if (currentBoard[i] === '') {
+                            currentBoard[i] = PLAYER;
+                            let score = minimax(currentBoard, depth + 1, true);
+                            currentBoard[i] = '';
+                            bestScore = Math.min(score, bestScore);
+                        }
+                    }
+                    return bestScore;
+                }
+            }
+        });
+    </script>
 </body>
 </html>
