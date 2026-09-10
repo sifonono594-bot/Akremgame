@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نظام اللعب أونلاين</title>
-  <!-- مكتبة PeerJS للربط أونلاين -->
+  <title>لعبة XO - أونلاين</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     body {
@@ -23,7 +22,7 @@
       border-radius: 16px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.5);
       width: 100%;
-      max-width: 400px;
+      max-width: 380px;
       text-align: center;
     }
     input {
@@ -46,129 +45,215 @@
       border-radius: 8px;
       cursor: pointer;
       font-weight: bold;
-      transition: 0.2s;
     }
-    button:hover {
-      background-color: #2563eb;
+    button:hover { background-color: #2563eb; }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 20px 0;
     }
-    .status {
-      margin-top: 15px;
-      font-size: 14px;
-      color: #a1a1aa;
+    .cell {
+      width: 80px;
+      height: 80px;
+      background-color: #2a2a2a;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: bold;
+      cursor: pointer;
     }
-    .chat-box {
-      margin-top: 15px;
-      height: 120px;
-      overflow-y: auto;
-      background: #18181b;
-      border-radius: 8px;
-      padding: 8px;
-      text-align: right;
-      font-size: 14px;
+    .banned-screen {
+      display: none;
+      color: #ef4444;
     }
   </style>
 </head>
 <body>
 
-<div class="card">
-  <h2>اللعب أونلاين (نظام الغرف)</h2>
-  
-  <div>
-    <p>معرف الغرفة الخاص بك:</p>
-    <b id="my-id" style="color: #60a5fa;">جاري الاتصال...</b>
+<div class="card" id="main-card">
+  <h2>لعبة XO أونلاين</h2>
+
+  <!-- شاشة الحظر -->
+  <div id="banned-section" class="banned-screen">
+    <h3>🚫 أنت مبند إلى الأبد!</h3>
+    <p>لقد خسرت في اللعبة وتم حظرك.</p>
+    <input type="text" id="unban-code" placeholder="أدخل كود الإحياء">
+    <button onclick="checkUnbanCode()">فك الحظر</button>
   </div>
 
-  <hr style="border-color: #333; margin: 20px 0;">
+  <!-- محتوى اللعبة الرئيسي -->
+  <div id="game-section">
+    <div>
+      <p>رمز غرفتك (5 أرقام):</p>
+      <b id="my-id" style="color: #60a5fa; font-size: 20px;">جاري التوليد...</b>
+    </div>
 
-  <div>
-    <input type="text" id="room-input" placeholder="أدخل رمز غرفة الصديق">
-    <button onclick="joinRoom()">انضمام للغرفة</button>
-  </div>
+    <hr style="border-color: #333; margin: 15px 0;">
 
-  <div class="status" id="status-text">حالة الاتصال: غير متصل</div>
+    <div>
+      <input type="text" id="room-input" maxlength="5" placeholder="رمز غرفة الخصم (5 أرقام)">
+      <button onclick="joinRoom()">انضمام</button>
+    </div>
 
-  <div class="chat-box" id="chat-box"></div>
+    <div id="status-text" style="margin-top:10px; font-size:14px; color:#a1a1aa;">الحالة: غير متصل</div>
 
-  <div style="margin-top: 10px;">
-    <input type="text" id="msg-input" placeholder="اكتب رسالة...">
-    <button onclick="sendData()">إرسال</button>
+    <div class="board" id="board">
+      <div class="cell" onclick="makeMove(0)"></div>
+      <div class="cell" onclick="makeMove(1)"></div>
+      <div class="cell" onclick="makeMove(2)"></div>
+      <div class="cell" onclick="makeMove(3)"></div>
+      <div class="cell" onclick="makeMove(4)"></div>
+      <div class="cell" onclick="makeMove(5)"></div>
+      <div class="cell" onclick="makeMove(6)"></div>
+      <div class="cell" onclick="makeMove(7)"></div>
+      <div class="cell" onclick="makeMove(8)"></div>
+    </div>
   </div>
 </div>
 
 <script>
+  const SECRET_UNBAN_CODE = "REVIVE2026"; // كود الإحياء
   let peer = null;
   let conn = null;
+  let mySymbol = "";
+  let currentTurn = "X";
+  let boardState = ["", "", "", "", "", "", "", "", ""];
+  let gameActive = false;
 
-  // إنشاء اتصال جديد مع السيرفر وتوليد ID تلقائي للغرفة
+  // التحقق من الحظر عند فتح الصفحة
+  if (localStorage.getItem("isBanned") === "true") {
+    showBanScreen();
+  } else {
+    initPeer();
+  }
+
+  function generate5DigitId() {
+    return Math.floor(10000 + Math.random() * 90000).toString();
+  }
+
   function initPeer() {
-    peer = new Peer();
+    const customId = generate5DigitId();
+    
+    // إعداد الاتصال مع سيرفرات STUN لحل مشكلة عدم الاتصال بين الجوالات
+    peer = new Peer(customId, {
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    });
 
     peer.on('open', (id) => {
       document.getElementById('my-id').innerText = id;
-      document.getElementById('status-text').innerText = "حالة الاتصال: جاهز للإنشاء أو الانضمام";
+      document.getElementById('status-text').innerText = "جاهز، أنت اللاعب (X)";
+      mySymbol = "X";
     });
 
-    // الاستماع عند انضمام شخص آخر لغرفتك
     peer.on('connection', (connection) => {
       conn = connection;
       setupConnection();
-      document.getElementById('status-text').innerText = "حالة الاتصال: تم اتصال الخصم بنجاح!";
+      document.getElementById('status-text').innerText = "متصل! دور اللاعب (X)";
+      gameActive = true;
     });
   }
 
-  // الانضمام لغرفة عبر الكود
   function joinRoom() {
     const roomId = document.getElementById('room-input').value.trim();
-    if (!roomId) return alert("يرجى إدخال رمز الغرفة أولاً");
+    if (roomId.length !== 5) return alert("أدخل رمزاً مكوناً من 5 أرقام");
 
-    document.getElementById('status-text').innerText = "جاري الاتصال بالغرفة...";
-    conn = peer.connect(roomId);
+    document.getElementById('status-text').innerText = "جاري الاتصال...";
+    conn = peer.connect(roomId, {
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    });
 
     conn.on('open', () => {
-      document.getElementById('status-text').innerText = "حالة الاتصال: متصل بالغرفة!";
+      mySymbol = "O";
+      document.getElementById('status-text').innerText = "متصل! أنت اللاعب (O)";
+      gameActive = true;
       setupConnection();
     });
   }
 
-  // إعداد إرسال واستقبال البيانات بين الأجهزة
   function setupConnection() {
     conn.on('data', (data) => {
-      appendMessage("الخصم: " + data);
-      
-      // لمعرفة هل تم استقبال البيانات بنجاح في الواجهة
-      // يمكنك استخدام متغير 'data' وتمريره لنظام اللعبة الخاص بك
-    });
-
-    conn.on('close', () => {
-      document.getElementById('status-text').innerText = "حالة الاتصال: قطع الاتصال";
+      if (data.type === "MOVE") {
+        updateBoard(data.index, data.symbol);
+        currentTurn = mySymbol;
+        checkGameResult();
+      }
     });
   }
 
-  // إرسال البيانات للطرف الآخر
-  function sendData() {
-    const input = document.getElementById('msg-input');
-    const data = input.value.trim();
-    
-    if (conn && conn.open && data !== "") {
-      conn.send(data);
-      appendMessage("أنت: " + data);
-      input.value = "";
-    } else {
-      alert("لست متصلاً بأي غرفة حالياً!");
+  function makeMove(index) {
+    if (!gameActive || boardState[index] !== "" || currentTurn !== mySymbol) return;
+
+    updateBoard(index, mySymbol);
+    conn.send({ type: "MOVE", index: index, symbol: mySymbol });
+    currentTurn = mySymbol === "X" ? "O" : "X";
+    checkGameResult();
+  }
+
+  function updateBoard(index, symbol) {
+    boardState[index] = symbol;
+    document.getElementsByClassName('cell')[index].innerText = symbol;
+  }
+
+  function checkGameResult() {
+    const wins = [
+      [0,1,2], [3,4,5], [6,7,8],
+      [0,3,6], [1,4,7], [2,5,8],
+      [0,4,8], [2,4,6]
+    ];
+
+    for (let combo of wins) {
+      const [a, b, c] = combo;
+      if (boardState[a] && boardState[a] === boardState[b] && boardState[a] === boardState[c]) {
+        gameActive = false;
+        if (boardState[a] === mySymbol) {
+          alert("🎉 مبروك! لقد فزت!");
+        } else {
+          alert("💀 خسرت! تم حظرك من اللعبة للأبد.");
+          applyBan();
+        }
+        return;
+      }
+    }
+
+    if (!boardState.includes("")) {
+      alert("تعادل!");
+      gameActive = false;
     }
   }
 
-  function appendMessage(msg) {
-    const chatBox = document.getElementById('chat-box');
-    const p = document.createElement('p');
-    p.style.margin = "4px 0";
-    p.innerText = msg;
-    chatBox.appendChild(p);
-    chatBox.scrollTop = chatBox.scrollHeight;
+  function applyBan() {
+    localStorage.setItem("isBanned", "true");
+    showBanScreen();
   }
 
-  // بدء التشغيل
-  initPeer();
+  function showBanScreen() {
+    document.getElementById('game-section').style.display = "none";
+    document.getElementById('banned-section').style.display = "block";
+  }
+
+  function checkUnbanCode() {
+    const input = document.getElementById('unban-code').value.trim();
+    if (input === SECRET_UNBAN_CODE) {
+      localStorage.removeItem("isBanned");
+      alert("تم فك الحظر بنجاح! عدت للحياة.");
+      location.reload();
+    } else {
+      alert("الكود خاطئ!");
+    }
+  }
 </script>
 
 </body>
