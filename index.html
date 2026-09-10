@@ -120,6 +120,52 @@
             color: #a1a1aa;
             font-size: 1rem;
             line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+
+        /* تنسيقات حقل كود فك الحظر */
+        .unban-box {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .unban-input {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #3f3f46;
+            background-color: #27272a;
+            color: #fff;
+            text-align: center;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .unban-input:focus {
+            border-color: #38bdf8;
+        }
+
+        .unban-btn {
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            background-color: #38bdf8;
+            color: #0f172a;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .unban-btn:hover {
+            background-color: #0284c7;
+            color: #fff;
+        }
+
+        #error-msg {
+            color: #ef4444;
+            font-size: 0.85rem;
+            margin-top: 5px;
         }
 
         .hidden {
@@ -134,6 +180,13 @@
         <div class="banned-card">
             <h1>💀 تم حظرك!</h1>
             <p>لقد خسرت اللعبة ضد البوت.. وكما اتفقنا، لا يمكنك دخول الموقع مرة أخرى!</p>
+            
+            <!-- حقل إدخال كود الاستعادة -->
+            <div class="unban-box">
+                <input type="text" id="unban-code" class="unban-input" placeholder="أدخل كود استعادة الحساب...">
+                <button id="unban-btn" class="unban-btn">فك الحظر والعودة</button>
+                <div id="error-msg" class="hidden">الكود غير صحيح!</div>
+            </div>
         </div>
     </div>
 
@@ -163,6 +216,9 @@
             const bannedScreen = document.getElementById('banned-screen');
             const cells = document.querySelectorAll('.cell');
             const statusText = document.getElementById('status');
+            const unbanInput = document.getElementById('unban-code');
+            const unbanBtn = document.getElementById('unban-btn');
+            const errorMsg = document.getElementById('error-msg');
 
             let board = ['', '', '', '', '', '', '', '', ''];
             let isGameActive = true;
@@ -178,10 +234,26 @@
             // 1. التحقق الفوري من حالة الحظر عند فتح الصفحة
             if (localStorage.getItem('xo_impossible_ban') === 'true') {
                 lockUserOut();
-                return;
             }
 
-            // 2. إضافة مستمع الأحداث لضغطات اللاعب
+            // 2. تفعيل كود فك الحظر (3mksif)
+            unbanBtn.addEventListener('click', handleUnban);
+
+            function handleUnban() {
+                const code = unbanInput.value.trim();
+                if (code === '3mksif') {
+                    localStorage.removeItem('xo_impossible_ban');
+                    bannedScreen.classList.add('hidden');
+                    gameScreen.classList.remove('hidden');
+                    resetGame();
+                    unbanInput.value = '';
+                    errorMsg.classList.add('hidden');
+                } else {
+                    errorMsg.classList.remove('hidden');
+                }
+            }
+
+            // 3. إضافة مستمع الأحداث لضغطات اللاعب
             cells.forEach(cell => {
                 cell.addEventListener('click', handleCellClick);
             });
