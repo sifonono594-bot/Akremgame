@@ -1,391 +1,175 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لعبة XO - البوت المستحيل</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background-color: #0f172a;
-            color: #f8fafc;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            text-align: center;
-        }
-
-        .container {
-            background-color: #1e293b;
-            padding: 2rem;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
-            max-width: 400px;
-            width: 90%;
-        }
-
-        h1 {
-            color: #38bdf8;
-            margin-bottom: 0.5rem;
-            font-size: 1.8rem;
-        }
-
-        .subtitle {
-            font-size: 0.85rem;
-            color: #ef4444;
-            margin-bottom: 1.5rem;
-            font-weight: bold;
-        }
-
-        #status {
-            font-size: 1.1rem;
-            margin-bottom: 1rem;
-            font-weight: bold;
-            min-height: 30px;
-        }
-
-        .board {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 1rem;
-        }
-
-        .cell {
-            width: 100%;
-            height: 90px;
-            background-color: #334155;
-            border-radius: 10px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 2.8rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-            user-select: none;
-        }
-
-        .cell:hover {
-            background-color: #475569;
-        }
-
-        .cell.x {
-            color: #38bdf8;
-        }
-
-        .cell.o {
-            color: #f43f5e;
-        }
-
-        /* شاشة الحظر النهائي */
-        #banned-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        .banned-card {
-            background-color: #18181b;
-            border: 2px solid #ef4444;
-            padding: 2.5rem;
-            border-radius: 16px;
-            color: #ef4444;
-            max-width: 400px;
-            width: 90%;
-            box-shadow: 0 0 30px rgba(239, 68, 68, 0.3);
-        }
-
-        .banned-card h1 {
-            color: #ef4444;
-            font-size: 2.2rem;
-            margin-bottom: 1rem;
-        }
-
-        .banned-card p {
-            color: #a1a1aa;
-            font-size: 1rem;
-            line-height: 1.5;
-            margin-bottom: 1.5rem;
-        }
-
-        /* تنسيقات حقل كود فك الحظر */
-        .unban-box {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .unban-input {
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #3f3f46;
-            background-color: #27272a;
-            color: #fff;
-            text-align: center;
-            font-size: 1rem;
-            outline: none;
-        }
-
-        .unban-input:focus {
-            border-color: #38bdf8;
-        }
-
-        .unban-btn {
-            padding: 12px;
-            border-radius: 8px;
-            border: none;
-            background-color: #38bdf8;
-            color: #0f172a;
-            font-weight: bold;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .unban-btn:hover {
-            background-color: #0284c7;
-            color: #fff;
-        }
-
-        #error-msg {
-            color: #ef4444;
-            font-size: 0.85rem;
-            margin-top: 5px;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام اللعب أونلاين</title>
+  <!-- مكتبة PeerJS للربط أونلاين -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background-color: #1e1e1e;
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    input {
+      width: 80%;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background-color: #2a2a2a;
+      color: #fff;
+      text-align: center;
+      font-size: 16px;
+    }
+    button {
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+    button:hover {
+      background-color: #2563eb;
+    }
+    .status {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #a1a1aa;
+    }
+    .chat-box {
+      margin-top: 15px;
+      height: 120px;
+      overflow-y: auto;
+      background: #18181b;
+      border-radius: 8px;
+      padding: 8px;
+      text-align: right;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
 
-    <!-- شاشة الحظر عند الخسارة -->
-    <div id="banned-screen" class="hidden">
-        <div class="banned-card">
-            <h1>💀 تم حظرك!</h1>
-            <p>لقد خسرت اللعبة ضد البوت.. وكما اتفقنا، لا يمكنك دخول الموقع مرة أخرى!</p>
-            
-            <!-- حقل إدخال كود الاستعادة -->
-            <div class="unban-box">
-                <input type="text" id="unban-code" class="unban-input" placeholder="أدخل كود استعادة الحساب...">
-                <button id="unban-btn" class="unban-btn">فك الحظر والعودة</button>
-                <div id="error-msg" class="hidden">الكود غير صحيح!</div>
-            </div>
-        </div>
-    </div>
+<div class="card">
+  <h2>اللعب أونلاين (نظام الغرف)</h2>
+  
+  <div>
+    <p>معرف الغرفة الخاص بك:</p>
+    <b id="my-id" style="color: #60a5fa;">جاري الاتصال...</b>
+  </div>
 
-    <!-- شاشة اللعبة -->
-    <div id="game-screen" class="container">
-        <h1>XO المستحيلة 🧠</h1>
-        <p class="subtitle">⚠️ خيار الخسارة = حظر دائم من الموقع!</p>
-        
-        <div id="status">دورك الآن (X)</div>
+  <hr style="border-color: #333; margin: 20px 0;">
 
-        <div class="board" id="board">
-            <div class="cell" data-index="0"></div>
-            <div class="cell" data-index="1"></div>
-            <div class="cell" data-index="2"></div>
-            <div class="cell" data-index="3"></div>
-            <div class="cell" data-index="4"></div>
-            <div class="cell" data-index="5"></div>
-            <div class="cell" data-index="6"></div>
-            <div class="cell" data-index="7"></div>
-            <div class="cell" data-index="8"></div>
-        </div>
-    </div>
+  <div>
+    <input type="text" id="room-input" placeholder="أدخل رمز غرفة الصديق">
+    <button onclick="joinRoom()">انضمام للغرفة</button>
+  </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const gameScreen = document.getElementById('game-screen');
-            const bannedScreen = document.getElementById('banned-screen');
-            const cells = document.querySelectorAll('.cell');
-            const statusText = document.getElementById('status');
-            const unbanInput = document.getElementById('unban-code');
-            const unbanBtn = document.getElementById('unban-btn');
-            const errorMsg = document.getElementById('error-msg');
+  <div class="status" id="status-text">حالة الاتصال: غير متصل</div>
 
-            let board = ['', '', '', '', '', '', '', '', ''];
-            let isGameActive = true;
-            const PLAYER = 'X';
-            const BOT = 'O';
+  <div class="chat-box" id="chat-box"></div>
 
-            const winConditions = [
-                [0, 1, 2], [3, 4, 5], [6, 7, 8],
-                [0, 3, 6], [1, 4, 7], [2, 5, 8],
-                [0, 4, 8], [2, 4, 6]
-            ];
+  <div style="margin-top: 10px;">
+    <input type="text" id="msg-input" placeholder="اكتب رسالة...">
+    <button onclick="sendData()">إرسال</button>
+  </div>
+</div>
 
-            // 1. التحقق الفوري من حالة الحظر عند فتح الصفحة
-            if (localStorage.getItem('xo_impossible_ban') === 'true') {
-                lockUserOut();
-            }
+<script>
+  let peer = null;
+  let conn = null;
 
-            // 2. تفعيل كود فك الحظر (3mksif)
-            unbanBtn.addEventListener('click', handleUnban);
+  // إنشاء اتصال جديد مع السيرفر وتوليد ID تلقائي للغرفة
+  function initPeer() {
+    peer = new Peer();
 
-            function handleUnban() {
-                const code = unbanInput.value.trim();
-                if (code === '3mksif') {
-                    localStorage.removeItem('xo_impossible_ban');
-                    bannedScreen.classList.add('hidden');
-                    gameScreen.classList.remove('hidden');
-                    resetGame();
-                    unbanInput.value = '';
-                    errorMsg.classList.add('hidden');
-                } else {
-                    errorMsg.classList.remove('hidden');
-                }
-            }
+    peer.on('open', (id) => {
+      document.getElementById('my-id').innerText = id;
+      document.getElementById('status-text').innerText = "حالة الاتصال: جاهز للإنشاء أو الانضمام";
+    });
 
-            // 3. إضافة مستمع الأحداث لضغطات اللاعب
-            cells.forEach(cell => {
-                cell.addEventListener('click', handleCellClick);
-            });
+    // الاستماع عند انضمام شخص آخر لغرفتك
+    peer.on('connection', (connection) => {
+      conn = connection;
+      setupConnection();
+      document.getElementById('status-text').innerText = "حالة الاتصال: تم اتصال الخصم بنجاح!";
+    });
+  }
 
-            function handleCellClick(e) {
-                const index = parseInt(e.target.getAttribute('data-index'));
+  // الانضمام لغرفة عبر الكود
+  function joinRoom() {
+    const roomId = document.getElementById('room-input').value.trim();
+    if (!roomId) return alert("يرجى إدخال رمز الغرفة أولاً");
 
-                if (board[index] !== '' || !isGameActive) return;
+    document.getElementById('status-text').innerText = "جاري الاتصال بالغرفة...";
+    conn = peer.connect(roomId);
 
-                // حركة اللاعب
-                makeMove(index, PLAYER);
+    conn.on('open', () => {
+      document.getElementById('status-text').innerText = "حالة الاتصال: متصل بالغرفة!";
+      setupConnection();
+    });
+  }
 
-                if (checkWin(board, PLAYER)) {
-                    statusText.textContent = '🎉 مستحيل! لقد فزت!';
-                    isGameActive = false;
-                    return;
-                }
+  // إعداد إرسال واستقبال البيانات بين الأجهزة
+  function setupConnection() {
+    conn.on('data', (data) => {
+      appendMessage("الخصم: " + data);
+      
+      // لمعرفة هل تم استقبال البيانات بنجاح في الواجهة
+      // يمكنك استخدام متغير 'data' وتمريره لنظام اللعبة الخاص بك
+    });
 
-                if (isBoardFull(board)) {
-                    statusText.textContent = '🤝 تعادل! نَجَوْت هذه المرة..';
-                    setTimeout(resetGame, 2000);
-                    return;
-                }
+    conn.on('close', () => {
+      document.getElementById('status-text').innerText = "حالة الاتصال: قطع الاتصال";
+    });
+  }
 
-                // دور البوت الذكي
-                isGameActive = false;
-                statusText.textContent = 'البوت يفكر... 🤖';
-                
-                setTimeout(() => {
-                    const bestMove = getBestMove();
-                    makeMove(bestMove, BOT);
+  // إرسال البيانات للطرف الآخر
+  function sendData() {
+    const input = document.getElementById('msg-input');
+    const data = input.value.trim();
+    
+    if (conn && conn.open && data !== "") {
+      conn.send(data);
+      appendMessage("أنت: " + data);
+      input.value = "";
+    } else {
+      alert("لست متصلاً بأي غرفة حالياً!");
+    }
+  }
 
-                    if (checkWin(board, BOT)) {
-                        statusText.textContent = '💀 كش ملك! لقد خسرت!';
-                        localStorage.setItem('xo_impossible_ban', 'true');
-                        setTimeout(lockUserOut, 1500);
-                        return;
-                    }
+  function appendMessage(msg) {
+    const chatBox = document.getElementById('chat-box');
+    const p = document.createElement('p');
+    p.style.margin = "4px 0";
+    p.innerText = msg;
+    chatBox.appendChild(p);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
 
-                    if (isBoardFull(board)) {
-                        statusText.textContent = '🤝 تعادل! نَجَوْت هذه المرة..';
-                        setTimeout(resetGame, 2000);
-                        return;
-                    }
+  // بدء التشغيل
+  initPeer();
+</script>
 
-                    statusText.textContent = 'دورك الآن (X)';
-                    isGameActive = true;
-                }, 400);
-            }
-
-            function makeMove(index, symbol) {
-                board[index] = symbol;
-                cells[index].textContent = symbol;
-                cells[index].classList.add(symbol.toLowerCase());
-            }
-
-            function checkWin(currentBoard, symbol) {
-                return winConditions.some(condition => {
-                    return condition.every(index => currentBoard[index] === symbol);
-                });
-            }
-
-            function isBoardFull(currentBoard) {
-                return currentBoard.every(cell => cell !== '');
-            }
-
-            function resetGame() {
-                board = ['', '', '', '', '', '', '', '', ''];
-                cells.forEach(cell => {
-                    cell.textContent = '';
-                    cell.classList.remove('x', 'o');
-                });
-                statusText.textContent = 'دورك الآن (X)';
-                isGameActive = true;
-            }
-
-            function lockUserOut() {
-                gameScreen.classList.add('hidden');
-                bannedScreen.classList.remove('hidden');
-            }
-
-            // ==========================================
-            // خوارزمية الذكاء الاصطناعي (Minimax Algorithm)
-            // ==========================================
-            function getBestMove() {
-                let bestScore = -Infinity;
-                let move = -1;
-
-                for (let i = 0; i < 9; i++) {
-                    if (board[i] === '') {
-                        board[i] = BOT;
-                        let score = minimax(board, 0, false);
-                        board[i] = '';
-                        if (score > bestScore) {
-                            bestScore = score;
-                            move = i;
-                        }
-                    }
-                }
-                return move;
-            }
-
-            function minimax(currentBoard, depth, isMaximizing) {
-                if (checkWin(currentBoard, BOT)) return 10 - depth;
-                if (checkWin(currentBoard, PLAYER)) return depth - 10;
-                if (isBoardFull(currentBoard)) return 0;
-
-                if (isMaximizing) {
-                    let bestScore = -Infinity;
-                    for (let i = 0; i < 9; i++) {
-                        if (currentBoard[i] === '') {
-                            currentBoard[i] = BOT;
-                            let score = minimax(currentBoard, depth + 1, false);
-                            currentBoard[i] = '';
-                            bestScore = Math.max(score, bestScore);
-                        }
-                    }
-                    return bestScore;
-                } else {
-                    let bestScore = Infinity;
-                    for (let i = 0; i < 9; i++) {
-                        if (currentBoard[i] === '') {
-                            currentBoard[i] = PLAYER;
-                            let score = minimax(currentBoard, depth + 1, true);
-                            currentBoard[i] = '';
-                            bestScore = Math.min(score, bestScore);
-                        }
-                    }
-                    return bestScore;
-                }
-            }
-        });
-    </script>
 </body>
 </html>
